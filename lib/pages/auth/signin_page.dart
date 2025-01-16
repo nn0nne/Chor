@@ -1,4 +1,8 @@
+import 'package:chor/pages/auth/signup_page.dart';
+import 'package:chor/pages/home_page.dart';
+import 'package:chor/services/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class SignIn extends StatefulWidget {
   const SignIn({super.key});
@@ -8,8 +12,15 @@ class SignIn extends StatefulWidget {
 }
 
 class _SignInState extends State<SignIn> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+  String? _errorMessage;
+
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+
     return Scaffold(
       backgroundColor: Color(0xFF070F2B),
       body: Center(
@@ -83,6 +94,7 @@ class _SignInState extends State<SignIn> {
                                 color: Color(0xFFEEEEEE), fontSize: 20),
                           ),
                           TextField(
+                            controller: _emailController,
                             decoration: InputDecoration(
                               filled: true,
                               fillColor:
@@ -90,10 +102,10 @@ class _SignInState extends State<SignIn> {
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.0),
                               ),
-                              labelText: "Enter your email",
-                              labelStyle: TextStyle(color: Color(0xFF282828)),
+                              hintText: "Enter your email",
+                              hintStyle: TextStyle(color: Color(0xFF282828)),
                             ),
-                            style: TextStyle(color: Color(0xFFEEEEEE)),
+                            style: TextStyle(color: Color(0xFF282828)),
                           ),
                           const SizedBox(height: 16), // Spacing between fields
 
@@ -104,6 +116,7 @@ class _SignInState extends State<SignIn> {
                                 color: Color(0xFFEEEEEE), fontSize: 20),
                           ),
                           TextField(
+                            controller: _passwordController,
                             obscureText: true,
                             decoration: InputDecoration(
                               filled: true,
@@ -112,50 +125,112 @@ class _SignInState extends State<SignIn> {
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.0),
                               ),
-                              labelText: "Enter your password",
-                              labelStyle: TextStyle(color: Color(0xFF282828)),
+                              hintText: "Enter your password",
+                              hintStyle: TextStyle(color: Color(0xFF282828)),
                             ),
-                            style: TextStyle(color: Color(0xFFEEEEEE)),
+                            style: TextStyle(color: Color(0xFF282828)),
                           ),
+                          if (_errorMessage != null)
+                            Text(
+                              _errorMessage!,
+                              style: const TextStyle(color: Colors.red),
+                            ),
+
+                          const SizedBox(height: 40),
+
+                          // Sign-In Button
+                          _isLoading
+                              ? Center(child: const CircularProgressIndicator())
+                              : Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: () async {
+                                          setState(() {
+                                            _isLoading = true;
+                                            _errorMessage = null;
+                                          });
+
+                                          try {
+                                            await authService.signIn(
+                                                _emailController.text.trim(),
+                                                _passwordController.text.trim(),
+                                                context);
+                                            // Navigate to HomePage and remove all previous routes
+                                            Navigator.pushAndRemoveUntil(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      HomePage()), // Replace HomePage with your actual home page widget
+                                              (route) =>
+                                                  false, // Remove all previous routes
+                                            );
+                                          } catch (e) {
+                                            setState(() {
+                                              _errorMessage = e.toString();
+                                            });
+                                          } finally {
+                                            setState(() {
+                                              _isLoading = false;
+                                            });
+                                          }
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          padding: EdgeInsets.symmetric(
+                                              vertical: 16.0), // Button height
+                                          backgroundColor:
+                                              Color(0xFF1B1A55), // Button color
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12.0),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          "Sign In",
+                                          style: TextStyle(
+                                            color: Color(0xFFEEEEEE),
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ],
                       ),
-                      // Email TextField
-
-                      const SizedBox(height: 40), // Spacing before the button
-
-                      // Sign-Up Button
-                      Center(
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () {},
-                                style: ElevatedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(
-                                      vertical: 16.0), // Button height
-                                  backgroundColor:
-                                      Color(0xFF1B1A55), // Button color
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12.0),
-                                  ),
-                                ),
-                                child: Text(
-                                  "Sign In",
-                                  style: TextStyle(
-                                    color: Color(0xFFEEEEEE),
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                       SizedBox(height: 40),
-                      Text(
-                        "Don't have an acount? Sign up",
-                        style:
-                            TextStyle(color: Color(0xFFEEEEEE), fontSize: 16),
+                      // Sign-Up Link
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Don't have an account? ",
+                            style: const TextStyle(
+                              color: Color(0xFFEEEEEE),
+                              fontSize: 16,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              // Navigate to the Sign Up page
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => SignUp()),
+                              );
+                            },
+                            child: Text(
+                              "Sign up",
+                              style: const TextStyle(
+                                  color: Color(0xFFEEEEEE),
+                                  fontSize: 16,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: Color(
+                                      0xFFEEEEEE) // Optional to show it's clickable
+                                  ),
+                            ),
+                          ),
+                        ],
                       ),
                       SizedBox(height: 10),
                     ],

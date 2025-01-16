@@ -1,29 +1,36 @@
+import 'package:chor/services/firebase.dart';
 import 'package:flutter/material.dart';
+import 'package:chor/pages/playlist_view.dart'; // Import the PlaylistView page
 
 class PlaylistCard extends StatelessWidget {
   final String coverImageUrl;
   final String title;
-  final bool isUploadedByUser; // Determines if the edit icon should be shown
-  final VoidCallback? onEdit; // Callback for the edit button
-  final VoidCallback? onTap; // Callback for tapping the card
+  final String createdBy;
 
   const PlaylistCard({
     super.key,
     required this.coverImageUrl,
     required this.title,
-    this.isUploadedByUser = true,
-    this.onEdit,
-    this.onTap,
+    required this.createdBy,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: () async {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PlaylistView(
+                coverImageUrl: coverImageUrl,
+                title: title,
+                createdBy: createdBy,
+              ),
+            ));
+      },
       borderRadius: BorderRadius.circular(8),
       child: Container(
         height: 70,
-        // padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Color(0x801B1A55),
           borderRadius: BorderRadius.circular(8),
@@ -75,16 +82,6 @@ class PlaylistCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Edit Icon (only visible if isUploadedByUser is true)
-            if (isUploadedByUser)
-              IconButton(
-                icon: const Icon(
-                  Icons.edit,
-                  color: Colors.grey,
-                ),
-                onPressed: onEdit,
-                tooltip: 'Edit song',
-              ),
           ],
         ),
       ),

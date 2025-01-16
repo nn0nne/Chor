@@ -12,6 +12,12 @@ class _SearchPageState extends State<SearchPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.person, color: Color(0xFFEEEEEE)),
+          onPressed: () {
+            Scaffold.of(context).openDrawer();
+          },
+        ),
         title: Text(
           "Search",
           style: TextStyle(

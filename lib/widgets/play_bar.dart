@@ -1,171 +1,115 @@
-// class MyApp extends StatelessWidget {
-//   const MyApp({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'Chor',
-//       debugShowCheckedModeBanner: false,
-//       home: Scaffold(
-//         body: Stack(
-//           children: [
-//             LibraryPage(), // Main content of the page
-//             Align(
-//               alignment: Alignment.bottomCenter,
-//               child: Column(
-//                 mainAxisSize: MainAxisSize.min,
-//                 children: [
-//                   PlayBar(
-//                     coverImageUrl: 'https://via.placeholder.com/150',
-//                     title: 'Distance',
-//                     artist: 'k?d',
-//                   ),
-//                   BottomNavBar(),
-//                 ],
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
-
+import 'package:chor/pages/song_view.dart';
+import 'package:chor/services/player_service.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 
-class PlayBar extends StatefulWidget {
-  final String coverImageUrl;
-  final String title;
-  final String artist;
-
-  const PlayBar({
-    super.key,
-    required this.coverImageUrl,
-    required this.title,
-    required this.artist,
-  });
-
-  @override
-  State<PlayBar> createState() => _PlayBarState();
-}
-
-class _PlayBarState extends State<PlayBar> {
-  bool isPlaying = false; // Tracks play/pause state
-  bool isLiked = false; // Tracks like state
-
-  void togglePlayPause() {
-    setState(() {
-      isPlaying = !isPlaying;
-    });
-  }
-
-  void toggleLike() {
-    setState(() {
-      isLiked = !isLiked;
-    });
-  }
+class PlayBar extends StatelessWidget {
+  const PlayBar({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      height: 80,
-      decoration: BoxDecoration(
-        color: Color(0x801B1A55),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
+    final playerProvider = context.watch<PlayerProvider>();
+    final song = playerProvider.currentSong;
+
+    // Hide PlayBar if no song is playing
+    if (song == null) {
+      return const SizedBox.shrink();
+    }
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                const SongView(), // Replace with your SongView constructor
+          ),
+        );
+      },
+      child: Container(
+        height: 80,
+        decoration: BoxDecoration(
+          color: const Color(0x801B1A55),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            // Album art
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade400,
-                borderRadius: BorderRadius.circular(10),
-                image: const DecorationImage(
-                  image: AssetImage('assets/images/music_placeholder.png'),
-                  fit: BoxFit.cover,
+            // Album Art
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: CachedNetworkImage(
+                    imageUrl: song.coverImageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.music_note),
+                    ),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 16),
-
-            // Song details
+            const SizedBox(width: 8),
+            // Song Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    widget.title,
+                    song.title,
                     style: const TextStyle(
-                      color: Color(0xFFEEEEEE),
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
                   Text(
-                    widget.artist,
-                    style: TextStyle(
-                      color: Color(0xCCEEEEEE),
+                    song.artist,
+                    style: const TextStyle(
                       fontSize: 14,
+                      color: Colors.grey,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-
-            // Control buttons
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    isPlaying
-                        ? Icons.thumb_up_alt
-                        : Icons.thumb_up_alt_outlined,
-                    color: Color(0xFFEEEEEE),
-                    size: 30,
-                  ),
-                  onPressed: () {},
-                  padding: EdgeInsets.zero,
-                ),
-                SizedBox(width: 16),
-                // Play/Pause button
-                IconButton(
-                  icon: Icon(
-                    isPlaying
-                        ? Icons.pause_circle_filled
-                        : Icons.play_circle_filled,
-                    color: Color(0xFFEEEEEE),
-                    size: 40,
-                  ),
-                  onPressed: () {},
-                  padding: EdgeInsets.zero,
-                ),
-
-                // Close button
-                // if (() {} != null)
-                //   IconButton(
-                //     icon: Icon(
-                //       Icons.close,
-                //       color: Colors.grey.shade600,
-                //       size: 24,
-                //     ),
-                //     onPressed: () {},
-                //     padding: EdgeInsets.zero,
-                //   ),
-              ],
+            // Like Button
+            IconButton(
+              icon: Icon(
+                playerProvider.isLiked
+                    ? Icons.thumb_up_alt
+                    : Icons.thumb_up_alt_outlined,
+                color: const Color(0xFFEEEEEE),
+              ),
+              onPressed: playerProvider.toggleLike,
+            ),
+            // Play/Pause Button
+            IconButton(
+              icon: Icon(
+                playerProvider.isPlaying
+                    ? Icons.pause_circle_filled
+                    : Icons.play_circle_filled,
+                size: 40,
+                color: Colors.white,
+              ),
+              onPressed: playerProvider.togglePlayPause,
             ),
           ],
         ),
