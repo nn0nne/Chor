@@ -4,36 +4,41 @@ import 'package:chor/services/firebase.dart';
 import 'package:chor/services/player_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class SongCard extends StatelessWidget {
-  final String coverImageUrl;
+  final String coverUrl;
   final String songUrl;
   final String title;
   final String artists;
   final String songId;
-  final bool isUploadedByUser;
+  final String userId;
+  // final bool isUploadedByUser;
 
   const SongCard({
     super.key,
-    required this.coverImageUrl,
+    required this.coverUrl,
     required this.songUrl,
     required this.title,
     required this.artists,
     required this.songId,
-    this.isUploadedByUser = true,
+    required this.userId,
+    // this.isUploadedByUser = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
     return InkWell(
       onTap: () {
         try {
           context.read<PlayerProvider>().playSong(
                 title: title,
                 artist: artists,
-                coverImageUrl: coverImageUrl,
+                coverImageUrl: coverUrl,
                 songUrl: songUrl,
               );
         } catch (e) {
@@ -43,6 +48,7 @@ class SongCard extends StatelessWidget {
           );
         }
       },
+      onLongPress: () => _showPlaylistDialog(context, songId, title),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         height: 70,
@@ -62,7 +68,7 @@ class SongCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
-                coverImageUrl,
+                coverUrl,
                 width: 70,
                 height: 70,
                 fit: BoxFit.cover,
@@ -104,7 +110,7 @@ class SongCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (isUploadedByUser)
+            if (userId == currentUserId)
               IconButton(
                 icon: const Icon(
                   Icons.edit,
@@ -123,8 +129,8 @@ class SongCard extends StatelessWidget {
                       _showEditSongDialog(context, songId, {
                         'title': songData?['title'] ?? '',
                         'artists': songData?['artists'] ?? '',
-                        'coverImageUrl': songData?['coverUrl'] ?? '',
-                        'songFileUrl': songData?['songUrl'] ?? '',
+                        'coverUrl': songData?['coverUrl'] ?? '',
+                        'songUrl': songData?['songUrl'] ?? '',
                       });
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -146,12 +152,163 @@ class SongCard extends StatelessWidget {
   }
 }
 
+void _showPlaylistDialog(
+    BuildContext context, String songId, String songTitle) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        backgroundColor: const Color(0xFF1B1A55),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: FutureBuilder<QuerySnapshot>(
+          future: FirebaseFirestore.instance
+              .collection('Playlists')
+              .where('createdById',
+                  isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+              .get(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return const Center(child: Text('Error loading playlists'));
+            }
+
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return SizedBox(
+                height: 100,
+                child: const Center(
+                  child: Text(
+                    'No playlists found',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              );
+            }
+
+            final playlists = snapshot.data!.docs;
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text(
+                    'Manage Playlist',
+                    style: TextStyle(
+                      color: Color(0xFFEEEEEE),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: playlists.length,
+                  itemBuilder: (context, index) {
+                    final playlist = playlists[index];
+                    final playlistName = playlist['name'];
+                    final playlistId = playlist.id;
+                    final List songs = playlist['songs'] ?? [];
+
+                    final isSongInPlaylist = songs.contains(songId);
+
+                    return ListTile(
+                      title: Text(
+                        playlistName,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      subtitle: Text(
+                        isSongInPlaylist
+                            ? 'Song is in this playlist'
+                            : 'Song not in this playlist',
+                        style: TextStyle(
+                          color: isSongInPlaylist
+                              ? Colors.greenAccent
+                              : Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                      trailing: isSongInPlaylist
+                          ? IconButton(
+                              icon: const Icon(Icons.remove_circle,
+                                  color: Colors.redAccent),
+                              onPressed: () async {
+                                try {
+                                  await FirebaseFirestore.instance
+                                      .collection('Playlists')
+                                      .doc(playlistId)
+                                      .update({
+                                    'songs': FieldValue.arrayRemove([songId]),
+                                  });
+
+                                  Navigator.pop(context);
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          '$songTitle removed from $playlistName playlist'),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error removing song: $e'),
+                                    ),
+                                  );
+                                }
+                              },
+                            )
+                          : IconButton(
+                              icon: const Icon(Icons.add_circle,
+                                  color: Colors.greenAccent),
+                              onPressed: () async {
+                                try {
+                                  await FirebaseFirestore.instance
+                                      .collection('Playlists')
+                                      .doc(playlistId)
+                                      .update({
+                                    'songs': FieldValue.arrayUnion([songId]),
+                                  });
+
+                                  Navigator.pop(context);
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          '$songTitle added to $playlistName playlist'),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error adding song: $e'),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    },
+  );
+}
+
 void _showEditSongDialog(
     BuildContext context, String songId, Map<String, dynamic> songData) {
   final _titleController = TextEditingController(text: songData['title']);
   final _artistController = TextEditingController(text: songData['artists']);
-  String? coverImageUrl = songData['coverImageUrl'];
-  String? songFileUrl = songData['songFileUrl'];
+  String? coverUrl = songData['coverUrl'];
+  String? songUrl = songData['songUrl'];
 
   void _pickFile(
       {required FileType fileType, required Function(File) onSelected}) async {
@@ -262,7 +419,7 @@ void _showEditSongDialog(
                         _uploadFile(
                           file,
                           'songs/${file.path.split('/').last}',
-                          (url) => songFileUrl = url,
+                          (url) => songUrl = url,
                         );
                       },
                     ),
@@ -286,7 +443,7 @@ void _showEditSongDialog(
                         _uploadFile(
                           file,
                           'covers/${file.path.split('/').last}',
-                          (url) => coverImageUrl = url,
+                          (url) => coverUrl = url,
                         );
                       },
                     ),
@@ -340,8 +497,8 @@ void _showEditSongDialog(
                                 await FirebaseService().editSong(songId, {
                                   'title': _titleController.text.trim(),
                                   'artists': _artistController.text.trim(),
-                                  'coverImageUrl': coverImageUrl,
-                                  'songFileUrl': songFileUrl,
+                                  'coverUrl': coverUrl,
+                                  'songUrl': songUrl,
                                 });
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(

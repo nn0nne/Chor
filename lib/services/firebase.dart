@@ -32,6 +32,58 @@ class FirebaseService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getSongsFromPlaylist(
+      String playlistId) async {
+    try {
+      // Fetch the playlist document
+      DocumentSnapshot playlistDoc = await FirebaseFirestore.instance
+          .collection('Playlists')
+          .doc(playlistId)
+          .get();
+
+      if (playlistDoc.exists) {
+        final data = playlistDoc.data() as Map<String, dynamic>?;
+
+        if (data == null) {
+          print("Playlist data is null.");
+          return [];
+        }
+
+        // Access the 'songs' array
+        List<dynamic>? songIds = data['songs'] as List<dynamic>?;
+
+        if (songIds == null || songIds.isEmpty) {
+          print("No songs found in playlist.");
+          return [];
+        }
+
+        // Fetch details for each song ID
+        List<Map<String, dynamic>> songs = [];
+        for (String songId in songIds.cast<String>()) {
+          DocumentSnapshot songDoc = await FirebaseFirestore.instance
+              .collection('Songs')
+              .doc(songId)
+              .get();
+
+          if (songDoc.exists) {
+            final songData = songDoc.data() as Map<String, dynamic>;
+            songData['id'] = songDoc.id; // Add the document ID
+            songs.add(songData);
+          } else {
+            print("Song with ID $songId does not exist.");
+          }
+        }
+        return songs;
+      } else {
+        print("Playlist document does not exist.");
+        return [];
+      }
+    } catch (e) {
+      print("Error fetching playlist songs: $e");
+      throw e;
+    }
+  }
+
   /// Firestore - Songs
   Future<void> addSong(Map<String, dynamic> songData) async {
     try {
@@ -149,6 +201,47 @@ class FirebaseService {
       print('Playlist deleted successfully');
     } catch (e) {
       print('Error deleting playlist: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchSongsByTitle(
+      String lowerCaseTitle) async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('Songs')
+          .where('lowerCaseTitle', isGreaterThanOrEqualTo: lowerCaseTitle)
+          .where('lowerCaseTitle',
+              isLessThanOrEqualTo: lowerCaseTitle + '\uf8ff')
+          .get();
+      return snapshot.docs.map((doc) {
+        return {
+          'id': doc.id,
+          ...doc.data() as Map<String, dynamic>,
+        };
+      }).toList();
+    } catch (e) {
+      print('Error fetching songs by title: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchPlaylistsByTitle(
+      String lowerCaseName) async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('Playlists')
+          .where('lowerCaseName', isGreaterThanOrEqualTo: lowerCaseName)
+          .where('lowerCaseName', isLessThanOrEqualTo: lowerCaseName + '\uf8ff')
+          .get();
+      return snapshot.docs.map((doc) {
+        return {
+          'id': doc.id,
+          ...doc.data() as Map<String, dynamic>,
+        };
+      }).toList();
+    } catch (e) {
+      print('Error fetching playlists by title: $e');
+      return [];
     }
   }
 

@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:chor/services/firebase.dart';
 import 'package:chor/widgets/playlist_card.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -19,11 +18,14 @@ class _LibraryPageState extends State<LibraryPage> {
   List<Map<String, dynamic>> _playlists = [];
   List<Map<String, dynamic>> _userSongs = [];
   List<String> _likedSongs = [];
-  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  late String userId;
+  String searchQuery = "";
+  bool isSearching = false;
 
   @override
   void initState() {
     super.initState();
+    userId = FirebaseAuth.instance.currentUser?.uid ?? '';
     _loadData();
   }
 
@@ -53,7 +55,7 @@ class _LibraryPageState extends State<LibraryPage> {
             Scaffold.of(context).openDrawer();
           },
         ),
-        title: Text(
+        title: const Text(
           "Your Library",
           style: TextStyle(
               color: Color(0xFFEEEEEE),
@@ -62,76 +64,158 @@ class _LibraryPageState extends State<LibraryPage> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.search),
-            onPressed: () {},
-            style: ButtonStyle(
-                iconColor: WidgetStatePropertyAll<Color>(Color(0xFFEEEEEE)),
-                iconSize: WidgetStatePropertyAll<double>(40)),
+            icon: Icon(isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                isSearching = !isSearching;
+                if (!isSearching) {
+                  searchQuery = ""; // Reset search query when search is closed
+                }
+              });
+            },
+            style: const ButtonStyle(
+              iconColor: MaterialStatePropertyAll<Color>(Color(0xFFEEEEEE)),
+              iconSize: MaterialStatePropertyAll<double>(40),
+            ),
           ),
           IconButton(
-            icon: Icon(Icons.add),
+            icon: const Icon(Icons.add),
             onPressed: () {
               _showAddOptions(context);
             },
-            style: ButtonStyle(
-                iconColor: WidgetStatePropertyAll<Color>(Color(0xFFEEEEEE)),
-                iconSize: WidgetStatePropertyAll<double>(40)),
+            style: const ButtonStyle(
+              iconColor: MaterialStatePropertyAll<Color>(Color(0xFFEEEEEE)),
+              iconSize: MaterialStatePropertyAll<double>(40),
+            ),
           )
         ],
-        backgroundColor: Color(0xFF070F2B),
+        backgroundColor: const Color(0xFF070F2B),
       ),
-      backgroundColor: Color(0xFF070F2B),
+      backgroundColor: const Color(0xFF070F2B),
       body: Container(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Your Songs",
-              style: TextStyle(
-                color: Color(0xFFEEEEEE),
-                fontSize: 24,
+            if (isSearching)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: TextField(
+                  autofocus: true,
+                  cursorColor: const Color(0xFFEEEEEE),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    hintText: "Search your playlists...",
+                    hintStyle: TextStyle(color: Colors.white54),
+                    filled: true,
+                    fillColor: Color(0xFF1A1A2E),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: (query) {
+                    setState(() {
+                      searchQuery = query.trim();
+                    });
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            PlaylistCard(
+            if (isSearching)
+              Expanded(
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: _playlists
+                      .where((playlist) =>
+                          playlist['createdById'] == userId &&
+                          playlist['name']
+                              .toString()
+                              .toLowerCase()
+                              .contains(searchQuery.toLowerCase()))
+                      .length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    final filteredPlaylists = _playlists
+                        .where((playlist) =>
+                            playlist['createdById'] == userId &&
+                            playlist['name']
+                                .toString()
+                                .toLowerCase()
+                                .contains(searchQuery.toLowerCase()))
+                        .toList();
+                    final playlist = filteredPlaylists[index];
+                    return PlaylistCard(
+                      coverImageUrl: playlist['coverUrl'] ??
+                          'https://via.placeholder.com/50',
+                      title: playlist['name'],
+                      createdBy: playlist['createdBy'],
+                      createdById: playlist['createdById'],
+                      playlistId: playlist['id'],
+                    );
+                  },
+                ),
+              ),
+            if (!isSearching) ...[
+              const Text(
+                "Your Songs",
+                style: TextStyle(
+                  color: Color(0xFFEEEEEE),
+                  fontSize: 24,
+                ),
+              ),
+              const SizedBox(height: 16),
+              PlaylistCard(
                 coverImageUrl: 'https://via.placeholder.com/50',
                 title: 'Your Songs',
-                createdBy: 'You'),
-            const SizedBox(height: 16),
-            const Text(
-              "Playlists",
-              style: TextStyle(
-                color: Color(0xFFEEEEEE),
-                fontSize: 24,
+                createdBy: 'You',
+                createdById: 'You',
+                playlistId: 'your_songs',
               ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.separated(
-                padding: EdgeInsets.zero,
-                itemCount:
-                    _playlists.length + 1, // Include the "Liked Songs" card
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 16),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
+              const SizedBox(height: 16),
+              const Text(
+                "Playlists",
+                style: TextStyle(
+                  color: Color(0xFFEEEEEE),
+                  fontSize: 24,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: _playlists
+                          .where(
+                              (playlist) => playlist['createdById'] == userId)
+                          .length +
+                      1, // Include "Liked Songs"
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return PlaylistCard(
+                        coverImageUrl: 'https://via.placeholder.com/50',
+                        title: 'Liked Songs',
+                        createdBy: 'You',
+                        createdById: 'You',
+                        playlistId: 'liked_songs',
+                      );
+                    }
+                    final playlist = _playlists
+                        .where((playlist) => playlist['createdById'] == userId)
+                        .toList()[index - 1];
                     return PlaylistCard(
-                      coverImageUrl: 'https://via.placeholder.com/50',
-                      title: 'Liked Songs',
-                      createdBy: 'You',
+                      coverImageUrl: playlist['coverUrl'] ??
+                          'https://via.placeholder.com/50',
+                      createdById: playlist['createdById'],
+                      title: playlist['name'],
+                      createdBy: playlist['createdBy'],
+                      playlistId: playlist['id'],
                     );
-                  }
-                  final playlist = _playlists[index - 1];
-                  return PlaylistCard(
-                    coverImageUrl: playlist['coverUrl'] ??
-                        'https://via.placeholder.com/50',
-                    title: playlist['name'],
-                    createdBy: playlist['createdBy'],
-                  );
-                },
+                  },
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -199,8 +283,10 @@ class _LibraryPageState extends State<LibraryPage> {
       // Create playlist document in Firestore with playlistId
       await _firebaseService.addPlaylist({
         'name': name,
-        'coverUrl': coverUrl,
+        'lowerCaseName': name.toLowerCase(),
+        'coverUrl': coverUrl ?? "https://via.placeholder.com/50",
         'createdBy': username,
+        'createdById': userId,
         'createdAt': DateTime.now().toIso8601String(),
         'songs': [], // Initialize with an empty list of songs
       });
@@ -379,9 +465,10 @@ class _LibraryPageState extends State<LibraryPage> {
         // Add song data with songId
         await _firebaseService.addSong({
           'title': title,
+          'lowerCaseTitle': title.toLowerCase(),
           'artists': artists, // Single string for all artists
           'songUrl': songUrl,
-          'coverUrl': coverUrl,
+          'coverUrl': coverUrl ?? "https://via.placeholder.com/50",
           'uploadedBy': userId,
           'createdAt': DateTime.now().toIso8601String(),
         });

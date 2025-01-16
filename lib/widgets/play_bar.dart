@@ -28,7 +28,7 @@ class PlayBar extends StatelessWidget {
         );
       },
       child: Container(
-        height: 80,
+        height: 90,
         decoration: BoxDecoration(
           color: const Color(0x801B1A55),
           borderRadius: const BorderRadius.only(
@@ -103,9 +103,11 @@ class PlayBar extends StatelessWidget {
             // Play/Pause Button
             IconButton(
               icon: Icon(
-                playerProvider.isPlaying
-                    ? Icons.pause_circle_filled
-                    : Icons.play_circle_filled,
+                playerProvider.currentPosition >= playerProvider.songDuration
+                    ? Icons.play_circle_filled
+                    : (playerProvider.isPlaying)
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_filled,
                 size: 40,
                 color: Colors.white,
               ),

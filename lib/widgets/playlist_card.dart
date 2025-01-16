@@ -1,32 +1,69 @@
-import 'package:chor/services/firebase.dart';
 import 'package:flutter/material.dart';
 import 'package:chor/pages/playlist_view.dart'; // Import the PlaylistView page
 
 class PlaylistCard extends StatelessWidget {
+  final String playlistId;
   final String coverImageUrl;
   final String title;
   final String createdBy;
+  final String createdById;
 
   const PlaylistCard({
     super.key,
+    required this.playlistId,
     required this.coverImageUrl,
     required this.title,
     required this.createdBy,
+    required this.createdById,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () async {
-        Navigator.push(
+        if (playlistId == 'your_songs') {
+          // Navigate to a specific "Your Songs" page
+          Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => PlaylistView(
+                playlistId: playlistId,
+                coverImageUrl: coverImageUrl,
+                title: "Your Songs",
+                createdBy: createdBy,
+                createdById: createdById,
+              ),
+            ),
+          );
+        } else if (playlistId == 'liked_songs') {
+          // Navigate to a specific "Liked Songs" page
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PlaylistView(
+                playlistId: playlistId,
+                coverImageUrl: coverImageUrl,
+                title: "Liked Songs",
+                createdBy: createdBy,
+                createdById: createdById,
+              ),
+            ),
+          );
+        } else {
+          // General behavior for other playlists
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PlaylistView(
+                playlistId: playlistId,
                 coverImageUrl: coverImageUrl,
                 title: title,
                 createdBy: createdBy,
+                createdById: createdById,
               ),
-            ));
+            ),
+          );
+        }
       },
       borderRadius: BorderRadius.circular(8),
       child: Container(

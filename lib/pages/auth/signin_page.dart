@@ -152,19 +152,25 @@ class _SignInState extends State<SignIn> {
                                           });
 
                                           try {
-                                            await authService.signIn(
-                                                _emailController.text.trim(),
-                                                _passwordController.text.trim(),
-                                                context);
+                                            bool signInSuccess =
+                                                await authService.signIn(
+                                                    _emailController.text
+                                                        .trim(),
+                                                    _passwordController.text
+                                                        .trim(),
+                                                    context);
                                             // Navigate to HomePage and remove all previous routes
-                                            Navigator.pushAndRemoveUntil(
-                                              context,
-                                              MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      HomePage()), // Replace HomePage with your actual home page widget
-                                              (route) =>
-                                                  false, // Remove all previous routes
-                                            );
+                                            if (signInSuccess) {
+                                              // Navigate to HomePage and remove all previous routes
+                                              Navigator.pushAndRemoveUntil(
+                                                context,
+                                                MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        HomePage()),
+                                                (route) =>
+                                                    false, // Remove all previous routes
+                                              );
+                                            }
                                           } catch (e) {
                                             setState(() {
                                               _errorMessage = e.toString();

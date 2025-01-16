@@ -1,6 +1,8 @@
 import 'package:chor/services/firebase.dart';
+import 'package:chor/services/player_service.dart';
 import 'package:chor/widgets/song_card.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -85,15 +87,28 @@ class _HomePageState extends State<HomePage> {
                           itemCount: songs.length,
                           itemBuilder: (context, index) {
                             final song = songs[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 16.0),
-                              child: SongCard(
-                                coverImageUrl: song['coverUrl'] ??
-                                    'https://via.placeholder.com/50',
-                                title: song['title'] ?? 'Unknown Title',
-                                artists: song['artists'] ?? 'Unknown Artist',
-                                songUrl: song['songUrl'] ?? '',
-                                songId: song['id'],
+                            return GestureDetector(
+                              onTap: () {
+                                // Get PlayerProvider
+                                final playerProvider =
+                                    Provider.of<PlayerProvider>(context,
+                                        listen: false);
+
+                                // Play selected song and set playlist
+                                playerProvider.playSingleOrPlaylist(
+                                    playlist: songs, startIndex: index);
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 16.0),
+                                child: SongCard(
+                                  coverUrl: song['coverUrl'] ??
+                                      'https://via.placeholder.com/50',
+                                  title: song['title'] ?? 'Unknown Title',
+                                  artists: song['artists'] ?? 'Unknown Artist',
+                                  songUrl: song['songUrl'] ?? '',
+                                  songId: song['id'],
+                                  userId: song['uploadedBy'],
+                                ),
                               ),
                             );
                           },

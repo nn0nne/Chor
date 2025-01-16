@@ -18,14 +18,15 @@ class AuthService with ChangeNotifier {
 
   bool get isLoggedIn => _user != null;
 
-  Future<void> signIn(
+  Future<bool> signIn(
       String email, String password, BuildContext context) async {
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       // Restart app to reflect changes in auth state
       _restartApp(context);
+      return true;
     } catch (e) {
-      print('Error during sign in: $e');
+      throw Exception('Sign-in failed: ${e.toString()}');
     }
   }
 
