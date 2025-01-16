@@ -48,7 +48,7 @@ class AuthService with ChangeNotifier {
       });
 
       // Restart app to reflect changes in auth state
-      // _restartApp(context);
+      _restartApp(context);
     } catch (e) {
       print('Error during sign up: $e');
     }

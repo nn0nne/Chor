@@ -23,6 +23,9 @@ class _HomePageState extends State<HomePage> {
     FirebaseService firebaseService = FirebaseService();
     List<Map<String, dynamic>> fetchedSongs =
         await firebaseService.fetchSongs();
+
+    if (!mounted) return; // Ensure the widget is still in the tree
+
     setState(() {
       songs = fetchedSongs;
       isLoading = false;
